@@ -1,5 +1,6 @@
 #include "mb.h"
 #include "mbport.h"
+#include "port_internal.h"
 
 /* UART handle - customize based on your project */
 static UART_HandleTypeDef *pxMBUartHandle;

@@ -1,5 +1,6 @@
 #include "mb.h"
 #include "mbport.h"
+#include "port_internal.h"
 
 static eMBEventType eQueuedEvent;
 static BOOL xEventInQueue;

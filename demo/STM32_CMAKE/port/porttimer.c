@@ -1,5 +1,6 @@
 #include "mb.h"
 #include "mbport.h"
+#include "port_internal.h"
 
 /* STM32 Timer handle - customize based on your project */
 static TIM_HandleTypeDef *pxMBTimerHandle;
