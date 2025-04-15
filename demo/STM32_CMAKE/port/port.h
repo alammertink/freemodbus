@@ -16,7 +16,7 @@
 #define ENTER_CRITICAL_SECTION()    __disable_irq()
 #define EXIT_CRITICAL_SECTION()     __enable_irq()
 
-typedef bool            BOOL;
+typedef uint8_t         BOOL;
 typedef unsigned char   UCHAR;
 typedef char            CHAR;
 typedef uint16_t        USHORT;
@@ -31,5 +31,10 @@ typedef int32_t         LONG;
 #ifndef FALSE
 #define FALSE           0
 #endif
+
+/* Function prototypes for IRQ handlers */
+void prvvUARTRxISR(void);
+void prvvUARTTxReadyISR(void);
+void prvvTIMERExpiredISR(void);
 
 #endif
