@@ -14,7 +14,7 @@ This project uses **Visual Studio Code** with the [STM32 VS Code Extension](http
 - **ARM GCC Toolchain**
 - **CMake**
 - **Ninja** (optional, for faster builds)
-- **Git** (for submodule management)
+- **Git** (for cloning the repository)
 
 ## Directory Structure
 
@@ -72,10 +72,29 @@ This port has been tested with the NUCLEO-G431RB board and should work on a wide
 
 ### 2. Integrate FreeModbus Library
 
-Once you have generated the STM32CubeMX project, open a terminal (Git Bash, PowerShell, etc.) in your project directory and follow these steps:
+You have two options for integrating the FreeModbus library into your project:
+
+#### Option A: Clone the Repository
+
+The simplest approach is to clone the FreeModbus repository directly:
 
 ```bash
-# Initialize git repository
+# Clone the FreeModbus repository
+git clone https://github.com/alammertink/freemodbus.git
+
+# Copy the .vscode directory from FreeModbus into your project
+cp -r freemodbus/demo/STM32_CMAKE/.vscode ./
+
+# Copy the example CMakeLists.txt (optional, you can also modify your existing one)
+cp freemodbus/demo/STM32_CMAKE/CMakeLists.txt .
+```
+
+#### Option B: Use Git Submodules
+
+If you're using Git for version control in your project, you can add FreeModbus as a submodule:
+
+```bash
+# Initialize git repository (if not already done)
 git init
 
 # Add FreeModbus as a Git submodule
@@ -87,6 +106,8 @@ cp -r freemodbus/demo/STM32_CMAKE/.vscode ./
 # Copy the example CMakeLists.txt (optional, you can also modify your existing one)
 cp freemodbus/demo/STM32_CMAKE/CMakeLists.txt .
 ```
+
+#### CMake Integration
 
 If you're using your own CMakeLists.txt, make sure to add the following:
 
