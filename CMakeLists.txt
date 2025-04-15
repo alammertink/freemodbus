@@ -22,7 +22,7 @@ set(FREEMODBUS_CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/mb.c
     # Functions
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/functions/mbfunccoils.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/modbus/functions/mbfuncdiag.c
+    #${CMAKE_CURRENT_SOURCE_DIR}/modbus/functions/mbfuncdiag.c
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/functions/mbfuncdisc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/functions/mbfuncholding.c
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/functions/mbfuncinput.c
