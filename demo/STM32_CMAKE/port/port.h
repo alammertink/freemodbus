@@ -32,9 +32,4 @@ typedef int32_t         LONG;
 #define FALSE           0
 #endif
 
-/* Function prototypes for IRQ handlers */
-void prvvUARTRxISR(void);
-void prvvUARTTxReadyISR(void);
-void prvvTIMERExpiredISR(void);
-
 #endif

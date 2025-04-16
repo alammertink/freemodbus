@@ -2,6 +2,8 @@
 #include "mbport.h"
 #include "port_internal.h"
 
+extern TIM_HandleTypeDef htim7;
+
 /* Static variables */
 static USHORT usTimerPeriod50us;
 static TIM_HandleTypeDef *pxModbusTimer;
@@ -64,3 +66,17 @@ void prvvMBTimerExpiredISR(void)
         pxMBTimerExpiredFuncCB();
     }
 }
+
+
+
+/**
+  * @brief This function handles TIM7 global interrupt.
+  */
+ void TIM7_IRQHandler(void)
+ { 
+      
+   pxMBPortCBTimerExpired();
+   HAL_TIM_IRQHandler(&htim7);
+ 
+ }
+ 

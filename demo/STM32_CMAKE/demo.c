@@ -34,15 +34,7 @@
 static USHORT   usRegInputStart = REG_INPUT_START;
 static USHORT   usRegInputBuf[REG_INPUT_NREGS];
 
-/* External variables for handles passed from main.c */
-extern TIM_HandleTypeDef htim7;
-extern UART_HandleTypeDef huart2;
-
 /* ----------------------- Static functions ---------------------------------*/
-/* Callbacks from the FreeModbus library */
-static void vTimerExpiredCB(void);
-static void vRxCB(void);
-static void vTxCB(void);
 
 /* Modbus register callback functions */
 eMBErrorCode eMBRegInputCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNRegs);
@@ -59,15 +51,6 @@ eMBErrorCode eMBRegDiscreteCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usND
 void modbusInit(void)
 {
     eMBErrorCode eStatus;
-    
-    /* Set up peripheral handles */
-    vMBSetTimerHandle(&htim7);
-    vMBSetUARTHandle(&hcom_uart[COM1]);
-    
-    /* Set up callback functions for the port layer */
-    vMBSetTimerExpiredCallback(vTimerExpiredCB);
-    vMBSetFrameRxCallback(vRxCB);
-    vMBSetFrameTxCallback(vTxCB);
     
     /* Initialize Modbus protocol stack */
     eStatus = eMBInit(MB_RTU, SLAVE_ID, 0, MB_BAUDRATE, MB_PAR_EVEN);
@@ -96,51 +79,7 @@ void modbusPoll(void)
     usRegInputBuf[0]++;
 }
 
-/* ----------------------- UART/Timer ISR callback functions --------------------------*/
-/**
-  * @brief  Call this from TIM7_IRQHandler in stm32g4xx_it.c
-  * @retval None
-  */
-void ModbusTimerISR(void)
-{
-    prvvMBTimerExpiredISR();
-}
 
-/**
-  * @brief  Call this from USART2_IRQHandler in stm32g4xx_it.c
-  * @note   Must be called when RXNE flag is set
-  * @retval None
-  */
-void ModbusUARTRxISR(void)
-{
-    prvvUARTRxISR();
-}
-
-/**
-  * @brief  Call this from USART2_IRQHandler in stm32g4xx_it.c
-  * @note   Must be called when TXE flag is set
-  * @retval None
-  */
-void ModbusUARTTxISR(void)
-{
-    prvvUARTTxReadyISR();
-}
-
-/* ----------------------- Static callbacks ---------------------------------*/
-static void vTimerExpiredCB(void)
-{
-    (void)pxMBPortCBTimerExpired();
-}
-
-static void vRxCB(void)
-{
-    pxMBFrameCBByteReceived();
-}
-
-static void vTxCB(void)
-{
-    pxMBFrameCBTransmitterEmpty();
-}
 
 /* ----------------------- Modbus register callback functions ---------------------------------*/
 eMBErrorCode
@@ -192,36 +131,3 @@ eMBRegDiscreteCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNDiscrete )
     return MB_ENOREG;
 }
 
-
-/**
-  * @brief This function handles USART2 global interrupt.
-  */
-void USART2_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART2_IRQn 0 */
-  if (__HAL_UART_GET_FLAG(&hcom_uart[COM1], UART_FLAG_RXNE))
-  {
-    prvvUARTRxISR();
-  }
-
-  if (__HAL_UART_GET_FLAG(&hcom_uart[COM1], UART_FLAG_TXE))
-  {
-    prvvUARTTxReadyISR();
-  }
-  /* USER CODE END USART2_IRQn 0 */
-  HAL_UART_IRQHandler(&hcom_uart[COM1]);
-  /* USER CODE BEGIN USART2_IRQn 1 */
-
-  /* USER CODE END USART2_IRQn 1 */
-}
-
-/**
-  * @brief This function handles TIM7 global interrupt.
-  */
-void TIM7_IRQHandler(void)
-{ 
-     
-  pxMBPortCBTimerExpired();
-  HAL_TIM_IRQHandler(&htim7);
-
-}

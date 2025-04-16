@@ -66,6 +66,9 @@ This port has been tested with the NUCLEO-G431RB board and should work on a wide
    - Select "Basic" for Application Structure
    - Select "CMake" for Toolchain/IDE
      ![Project Settings](./ProjectManager.png)
+   - Select "Advanced Settigs" and enable the Register CallBacks for UART and USART
+     ![Register Callbacks](./EnableUartRegisterCallBacks.png)
+
 
 5. **Generate Code**
    - Click "Generate Code" button to create the project files

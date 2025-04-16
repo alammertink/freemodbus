@@ -16,18 +16,4 @@
   #error "No STM32 device family defined!"
 #endif
 
-/* Functions to set callback handlers from demo.c */
-void vMBSetTimerExpiredCallback(void (*pxTimerExpiredFunc)(void));
-void vMBSetFrameRxCallback(void (*pxRxFunc)(void));
-void vMBSetFrameTxCallback(void (*pxTxFunc)(void));
-
-/* Functions to set peripheral handles */
-void vMBSetTimerHandle(TIM_HandleTypeDef *pxTimHandle);
-void vMBSetUARTHandle(UART_HandleTypeDef *pxUartHandle);
-
-/* Functions to be called from IRQ handlers */
-void prvvUARTRxISR(void);
-void prvvUARTTxReadyISR(void);
-void prvvMBTimerExpiredISR(void);
-
 #endif

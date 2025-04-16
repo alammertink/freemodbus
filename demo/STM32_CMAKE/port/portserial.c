@@ -2,147 +2,101 @@
 #include "mbport.h"
 #include "port_internal.h"
 
-/* Static variables */
-static UCHAR ucRxBuffer;
-static UART_HandleTypeDef *pxMBUartHandle;
+/* Already included from port_internal.h:
+#include "port.h"
+#include "stm32g4xx_hal.h"
+#include "stm32g4xx_nucleo.h"
+*/
 
-/* Function pointers for UART callbacks */
-static void (*pxMBFrameRxCB)(void) = NULL;
-static void (*pxMBFrameTxCB)(void) = NULL;
+#if (USE_BSP_COM_FEATURE > 0)
+extern UART_HandleTypeDef hcom_uart[];
+#define MODBUS_UART_HANDLE   ( &hcom_uart[COM1] )
+#else
+#error "BSP COM feature must be enabled"
+#endif
 
-void vMBSetUARTHandle(UART_HandleTypeDef *pxUartHandle)
+static volatile uint8_t    rxByte;
+static volatile uint8_t    txByte;
+static volatile BOOL       rxEnabled = FALSE;
+static volatile BOOL       txEnabled = FALSE;
+
+/* Forward declarations for HAL callbacks */
+static void Modbus_UART_RxCpltCallback( UART_HandleTypeDef *huart );
+static void Modbus_UART_TxCpltCallback( UART_HandleTypeDef *huart );
+
+/* ----------------------- Start implementation -----------------------------*/
+
+BOOL xMBPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity eParity )
 {
-    pxMBUartHandle = pxUartHandle;
-}
-
-void vMBSetFrameRxCallback(void (*pxRxFunc)(void))
-{
-    pxMBFrameRxCB = pxRxFunc;
-}
-
-void vMBSetFrameTxCallback(void (*pxTxFunc)(void))
-{
-    pxMBFrameTxCB = pxTxFunc;
-}
-
-BOOL xMBPortSerialInit(UCHAR ucPort, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity eParity)
-{
-    /* The UART is configured in main.c by STM32CubeMX */
-    if(pxMBUartHandle == NULL)
-    {
-        return FALSE;
-    }
-    
-    /* Override UART configuration if needed */
-    pxMBUartHandle->Init.BaudRate = ulBaudRate;
-    
-    /* Set parity */
-    switch(eParity)
-    {
-        case MB_PAR_NONE:
-            pxMBUartHandle->Init.Parity = UART_PARITY_NONE;
-            break;
-        case MB_PAR_EVEN:
-            pxMBUartHandle->Init.Parity = UART_PARITY_EVEN;
-            break;
-        case MB_PAR_ODD:
-            pxMBUartHandle->Init.Parity = UART_PARITY_ODD;
-            break;
-        default:
-            return FALSE;
-    }
-    
-    /* Set data bits - handle parity impact on word length */
-    if(eParity != MB_PAR_NONE)
-    {
-        /* With parity, word length is +1 */
-        if(ucDataBits == 8)
-            pxMBUartHandle->Init.WordLength = UART_WORDLENGTH_9B;
-        else if(ucDataBits == 7)
-            pxMBUartHandle->Init.WordLength = UART_WORDLENGTH_8B;
-        else
-            return FALSE;
-    }
-    else
-    {
-        /* Without parity */
-        if(ucDataBits == 8)
-            pxMBUartHandle->Init.WordLength = UART_WORDLENGTH_8B;
-        else if(ucDataBits == 7)
-            pxMBUartHandle->Init.WordLength = UART_WORDLENGTH_7B;
-        else
-            return FALSE;
-    }
-    
-    /* Apply settings */
-    if(HAL_UART_Init(pxMBUartHandle) != HAL_OK)
-    {
-        return FALSE;
-    }
-    
-    /* Start receiving first byte in interrupt mode */
-    if(HAL_UART_Receive_IT(pxMBUartHandle, &ucRxBuffer, 1) != HAL_OK)
-    {
-        return FALSE;
-    }
-    
+    // UART is already initialized by BSP, just register callbacks
+#if (USE_HAL_UART_REGISTER_CALLBACKS == 1)
+    HAL_UART_RegisterCallback( MODBUS_UART_HANDLE, HAL_UART_RX_COMPLETE_CB_ID, Modbus_UART_RxCpltCallback );
+    HAL_UART_RegisterCallback( MODBUS_UART_HANDLE, HAL_UART_TX_COMPLETE_CB_ID, Modbus_UART_TxCpltCallback );
+#endif
+    rxEnabled = FALSE;
+    txEnabled = FALSE;
     return TRUE;
 }
 
-void vMBPortSerialEnable(BOOL xRxEnable, BOOL xTxEnable)
+void vMBPortSerialEnable( BOOL xRxEnable, BOOL xTxEnable )
 {
-    if(xRxEnable)
+    rxEnabled = xRxEnable;
+    txEnabled = xTxEnable;
+
+    if( xRxEnable )
     {
-        /* Enable UART RX interrupt */
-        __HAL_UART_ENABLE_IT(pxMBUartHandle, UART_IT_RXNE);
-    }
-    else
-    {
-        /* Disable UART RX interrupt */
-        __HAL_UART_DISABLE_IT(pxMBUartHandle, UART_IT_RXNE);
+        HAL_UART_Receive_IT( MODBUS_UART_HANDLE, (uint8_t *)&rxByte, 1 );
     }
 
-    if(xTxEnable)
+    if( xTxEnable )
     {
-        /* Enable UART TX interrupt */
-        __HAL_UART_ENABLE_IT(pxMBUartHandle, UART_IT_TXE);
-    }
-    else
-    {
-        /* Disable UART TX interrupt */
-        __HAL_UART_DISABLE_IT(pxMBUartHandle, UART_IT_TXE);
+        // Immediately notify stack that TX is ready
+        pxMBFrameCBTransmitterEmpty();
     }
 }
 
-BOOL xMBPortSerialGetByte(CHAR *pucByte)
+BOOL xMBPortSerialPutByte( CHAR ucByte )
 {
-    *pucByte = ucRxBuffer;
-    
-    /* Start receiving next byte */
-    HAL_UART_Receive_IT(pxMBUartHandle, &ucRxBuffer, 1);
-    
+    txByte = (uint8_t)ucByte;
+    // Start UART transmit interrupt for 1 byte
+    if( HAL_UART_Transmit_IT( MODBUS_UART_HANDLE, (uint8_t *)&txByte, 1 ) == HAL_OK )
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL xMBPortSerialGetByte( CHAR * pucByte )
+{
+    *pucByte = (CHAR)rxByte;
     return TRUE;
 }
 
-BOOL xMBPortSerialPutByte(CHAR ucByte)
-{
-    /* Send byte - using polling mode for simplicity */
-    return (HAL_UART_Transmit(pxMBUartHandle, (uint8_t*)&ucByte, 1, 10) == HAL_OK);
-}
+/* ----------------------- HAL UART Callbacks -------------------------------*/
 
-/* Functions to be called from UART interrupt handler */
-void prvvUARTRxISR(void)
+static void Modbus_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 {
-    if(pxMBFrameRxCB != NULL)
+    if( huart == MODBUS_UART_HANDLE )
     {
-        pxMBFrameRxCB();
+        if( rxEnabled )
+        {
+            pxMBFrameCBByteReceived();
+            // Re-enable RX interrupt for next byte
+            HAL_UART_Receive_IT( MODBUS_UART_HANDLE, (uint8_t *)&rxByte, 1 );
+        }
     }
 }
 
-void prvvUARTTxReadyISR(void)
+static void Modbus_UART_TxCpltCallback( UART_HandleTypeDef *huart )
 {
-    if(pxMBFrameTxCB != NULL)
+    if( huart == MODBUS_UART_HANDLE )
     {
-        pxMBFrameTxCB();
+        if( txEnabled )
+        {
+            pxMBFrameCBTransmitterEmpty();
+        }
     }
 }
+
+/* ----------------------- End of file --------------------------------------*/
+
