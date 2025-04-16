@@ -62,7 +62,7 @@ void modbusInit(void)
     
     /* Set up peripheral handles */
     vMBSetTimerHandle(&htim7);
-    vMBSetUARTHandle(&huart2);
+    vMBSetUARTHandle(&hcom_uart[COM1]);
     
     /* Set up callback functions for the port layer */
     vMBSetTimerExpiredCallback(vTimerExpiredCB);
@@ -190,4 +190,38 @@ eMBErrorCode
 eMBRegDiscreteCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNDiscrete )
 {
     return MB_ENOREG;
+}
+
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+  if (__HAL_UART_GET_FLAG(&hcom_uart[COM1], UART_FLAG_RXNE))
+  {
+    prvvUARTRxISR();
+  }
+
+  if (__HAL_UART_GET_FLAG(&hcom_uart[COM1], UART_FLAG_TXE))
+  {
+    prvvUARTTxReadyISR();
+  }
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&hcom_uart[COM1]);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM7 global interrupt.
+  */
+void TIM7_IRQHandler(void)
+{ 
+     
+  pxMBPortCBTimerExpired();
+  HAL_TIM_IRQHandler(&htim7);
+
 }
