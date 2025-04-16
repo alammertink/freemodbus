@@ -23,7 +23,7 @@ BOOL xMBPortEventGet(eMBEventType *eEvent)
 {
     BOOL xEventHappened = FALSE;
     
-    if (xEventInQueue)
+    if(xEventInQueue)
     {
         *eEvent = eQueuedEvent;
         xEventInQueue = FALSE;

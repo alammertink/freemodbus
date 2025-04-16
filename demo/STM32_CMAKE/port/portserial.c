@@ -1,76 +1,97 @@
 #include "mb.h"
 #include "mbport.h"
 #include "port_internal.h"
-#include "stm32g4xx_nucleo.h"
 
 /* Static variables */
 static UCHAR ucRxBuffer;
-static BOOL bTxEnabled;
-static BOOL bRxEnabled;
+static UART_HandleTypeDef *pxMBUartHandle;
 
-/* UART handle - using the BSP UART handle */
-#define pxMBUartHandle (&hcom_uart[COM1])
+/* Function pointers for UART callbacks */
+static void (*pxMBFrameRxCB)(void) = NULL;
+static void (*pxMBFrameTxCB)(void) = NULL;
+
+void vMBSetUARTHandle(UART_HandleTypeDef *pxUartHandle)
+{
+    pxMBUartHandle = pxUartHandle;
+}
+
+void vMBSetFrameRxCallback(void (*pxRxFunc)(void))
+{
+    pxMBFrameRxCB = pxRxFunc;
+}
+
+void vMBSetFrameTxCallback(void (*pxTxFunc)(void))
+{
+    pxMBFrameTxCB = pxTxFunc;
+}
 
 BOOL xMBPortSerialInit(UCHAR ucPort, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity eParity)
 {
-    COM_InitTypeDef comInit;
-    
-    /* Configure COM port settings from Modbus parameters */
-    comInit.BaudRate = ulBaudRate;
-    
-    /* Map Modbus parity to COM parity */
-    switch (eParity) {
-        case MB_PAR_NONE:
-            comInit.Parity = COM_PARITY_NONE;
-            break;
-        case MB_PAR_EVEN:
-            comInit.Parity = COM_PARITY_EVEN;
-            break;
-        case MB_PAR_ODD:
-            comInit.Parity = COM_PARITY_ODD;
-            break;
-        default:
-            return FALSE;
-    }
-    
-    /* Map data bits to word length */
-    switch (ucDataBits) {
-        case 8:
-            comInit.WordLength = COM_WORDLENGTH_8B;
-            break;
-        case 7:
-            comInit.WordLength = COM_WORDLENGTH_7B;
-            break;
-        default:
-            return FALSE;
-    }
-    
-    /* Configure other settings */
-    comInit.StopBits = COM_STOPBITS_1;
-    comInit.HwFlowCtl = COM_HWCONTROL_NONE;
-    
-    /* Initialize the COM port */
-    if (BSP_COM_Init(COM1, &comInit) != BSP_ERROR_NONE) {
+    /* The UART is configured in main.c by STM32CubeMX */
+    if(pxMBUartHandle == NULL)
+    {
         return FALSE;
     }
     
-    /* Enable UART global interrupt */
-    HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(USART2_IRQn);
+    /* Override UART configuration if needed */
+    pxMBUartHandle->Init.BaudRate = ulBaudRate;
     
-    /* Start receiving first byte */
-    HAL_UART_Receive_IT(pxMBUartHandle, &ucRxBuffer, 1);
+    /* Set parity */
+    switch(eParity)
+    {
+        case MB_PAR_NONE:
+            pxMBUartHandle->Init.Parity = UART_PARITY_NONE;
+            break;
+        case MB_PAR_EVEN:
+            pxMBUartHandle->Init.Parity = UART_PARITY_EVEN;
+            break;
+        case MB_PAR_ODD:
+            pxMBUartHandle->Init.Parity = UART_PARITY_ODD;
+            break;
+        default:
+            return FALSE;
+    }
+    
+    /* Set data bits - handle parity impact on word length */
+    if(eParity != MB_PAR_NONE)
+    {
+        /* With parity, word length is +1 */
+        if(ucDataBits == 8)
+            pxMBUartHandle->Init.WordLength = UART_WORDLENGTH_9B;
+        else if(ucDataBits == 7)
+            pxMBUartHandle->Init.WordLength = UART_WORDLENGTH_8B;
+        else
+            return FALSE;
+    }
+    else
+    {
+        /* Without parity */
+        if(ucDataBits == 8)
+            pxMBUartHandle->Init.WordLength = UART_WORDLENGTH_8B;
+        else if(ucDataBits == 7)
+            pxMBUartHandle->Init.WordLength = UART_WORDLENGTH_7B;
+        else
+            return FALSE;
+    }
+    
+    /* Apply settings */
+    if(HAL_UART_Init(pxMBUartHandle) != HAL_OK)
+    {
+        return FALSE;
+    }
+    
+    /* Start receiving first byte in interrupt mode */
+    if(HAL_UART_Receive_IT(pxMBUartHandle, &ucRxBuffer, 1) != HAL_OK)
+    {
+        return FALSE;
+    }
     
     return TRUE;
 }
 
 void vMBPortSerialEnable(BOOL xRxEnable, BOOL xTxEnable)
 {
-    /* Remember current states */
-    bRxEnabled = xRxEnable;
-    bTxEnabled = xTxEnable;
-  
-    if (xRxEnable)
+    if(xRxEnable)
     {
         /* Enable UART RX interrupt */
         __HAL_UART_ENABLE_IT(pxMBUartHandle, UART_IT_RXNE);
@@ -81,7 +102,7 @@ void vMBPortSerialEnable(BOOL xRxEnable, BOOL xTxEnable)
         __HAL_UART_DISABLE_IT(pxMBUartHandle, UART_IT_RXNE);
     }
 
-    if (xTxEnable)
+    if(xTxEnable)
     {
         /* Enable UART TX interrupt */
         __HAL_UART_ENABLE_IT(pxMBUartHandle, UART_IT_TXE);
@@ -97,7 +118,7 @@ BOOL xMBPortSerialGetByte(CHAR *pucByte)
 {
     *pucByte = ucRxBuffer;
     
-    /* Start another receive operation */
+    /* Start receiving next byte */
     HAL_UART_Receive_IT(pxMBUartHandle, &ucRxBuffer, 1);
     
     return TRUE;
@@ -105,20 +126,23 @@ BOOL xMBPortSerialGetByte(CHAR *pucByte)
 
 BOOL xMBPortSerialPutByte(CHAR ucByte)
 {
-    /* Transmit one byte using the BSP COM UART handle */
-    if (HAL_UART_Transmit(pxMBUartHandle, (uint8_t*)&ucByte, 1, COM_POLL_TIMEOUT) == HAL_OK) {
-        return TRUE;
-    }
-    return FALSE;
+    /* Send byte - using polling mode for simplicity */
+    return (HAL_UART_Transmit(pxMBUartHandle, (uint8_t*)&ucByte, 1, 10) == HAL_OK);
 }
 
-/* UART callback handlers - to be called from the interrupt handler */
+/* Functions to be called from UART interrupt handler */
 void prvvUARTRxISR(void)
 {
-    pxMBFrameCBByteReceived();
+    if(pxMBFrameRxCB != NULL)
+    {
+        pxMBFrameRxCB();
+    }
 }
 
 void prvvUARTTxReadyISR(void)
 {
-    pxMBFrameCBTransmitterEmpty();
+    if(pxMBFrameTxCB != NULL)
+    {
+        pxMBFrameTxCB();
+    }
 }
