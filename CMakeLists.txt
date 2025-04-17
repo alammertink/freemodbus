@@ -45,10 +45,7 @@ set_property(TARGET freemodbus PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Set compiler options
 target_compile_options(freemodbus PRIVATE
-    -Wall
-    -Wextra
-    -ffunction-sections
-    -fdata-sections
+    -DSTM32_CMAKE    
 )
 
 # Export include directories for parent project

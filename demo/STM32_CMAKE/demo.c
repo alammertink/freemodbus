@@ -28,7 +28,7 @@
 #define REG_INPUT_START 1000
 #define REG_INPUT_NREGS 4
 #define SLAVE_ID        0x0A
-#define MB_BAUDRATE     38400
+#define MB_BAUDRATE     115200
 
 /* ----------------------- Static variables ---------------------------------*/
 static USHORT   usRegInputStart = REG_INPUT_START;
@@ -53,7 +53,8 @@ void modbusInit(void)
     eMBErrorCode eStatus;
     
     /* Initialize Modbus protocol stack */
-    eStatus = eMBInit(MB_RTU, SLAVE_ID, 0, MB_BAUDRATE, MB_PAR_EVEN);
+    eStatus = eMBInit(MB_RTU, SLAVE_ID, 0, MB_BAUDRATE, MB_PAR_NONE);
+    //eStatus = eMBInit(MB_ASCII, SLAVE_ID, 0, MB_BAUDRATE, MB_PAR_EVEN);
     
     /* Initialize register values */
     usRegInputBuf[0] = 0;  /* Initialize counter */
