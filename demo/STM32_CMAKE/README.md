@@ -249,6 +249,46 @@ int main(void)
 - The current implementation only supports RTU mode (ASCII mode is not tested).
 - The port uses TIM7 which may conflict with other timer-using peripherals.
 
+## Known Issues
+
+### Nucleo BSP Serial Port Callback Bug
+
+There is a known bug in the Nucleo BSP (`stm32g4xx_nucleo.c`) that causes the serial port's default callbacks to not be registered correctly. This issue affects the initialization of the UART when using the BSP.
+
+#### Problem
+The `IsComMspCbValid` variable is incorrectly checked as a single value instead of an array indexed by the COM port.
+
+#### Fix
+To resolve this issue, modify the `stm32g4xx_nucleo.c` file as follows:
+
+```diff
+--- a/Drivers/BSP/STM32G4xx_Nucleo/stm32g4xx_nucleo.c
++++ b/Drivers/BSP/STM32G4xx_Nucleo/stm32g4xx_nucleo.c
+@@ -384,7 +384,7 @@ int32_t BSP_COM_Init(COM_TypeDef COM, COM_InitTypeDef *COM_Init)
+     /* Init the UART Msp */
+     COM1_MspInit(&hcom_uart[COM]);
+ #else
+-    if(IsComMspCbValid == 0U)
++    if(IsComMspCbValid[COM] == 0U)
+     {
+       if(BSP_COM_RegisterDefaultMspCallbacks(COM) != BSP_ERROR_NONE)
+       {
+```
+
+#### Steps for Users
+1. Locate the `stm32g4xx_nucleo.c` file in your project under `Drivers/BSP/STM32G4xx_Nucleo/`.
+2. Apply the above patch manually or make the necessary changes directly in the file.
+3. Rebuild your project to ensure the fix is applied.
+
+This issue will need to be checked and resolved manually until an official fix is provided in the BSP package.
+
+---
+
+### Additional Notes
+
+- Ensure that the UART callbacks are properly registered after applying the fix.
+- If you encounter issues with UART communication, verify that the `IsComMspCbValid` array is correctly indexed for your COM port.
+
 ## License
 
 This STM32 CMake port follows the multi-license structure of the original FreeModbus project:
