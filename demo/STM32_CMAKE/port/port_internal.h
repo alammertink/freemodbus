@@ -16,4 +16,50 @@
   #error "No STM32 device family defined!"
 #endif
 
+/* Default to USART2 if MB_USART_NR is not defined */
+#ifndef MB_USART_NR
+  #define MB_USART_NR   2
 #endif
+
+/* Define macros based on the selected USART */
+#if (MB_USART_NR == 1)
+
+  #define MB_USART                        USART1
+  #define MB_USART_IRQn                   USART1_IRQn
+  #define MB_USART_IRQHandler             USART1_IRQHandler
+  #define MB_USART_CLK_ENABLE()           __HAL_RCC_USART1_CLK_ENABLE()
+  #define MB_USART_CLK_DISABLE()          __HAL_RCC_USART1_CLK_DISABLE()
+  #define MB_TX_PIN                       GPIO_PIN_9
+  #define MB_TX_GPIO_PORT                 GPIOA
+  #define MB_TX_GPIO_CLK_ENABLE()         __HAL_RCC_GPIOA_CLK_ENABLE()
+  #define MB_TX_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOA_CLK_DISABLE()
+  #define MB_TX_AF                        GPIO_AF7_USART1
+  #define MB_RX_PIN                       GPIO_PIN_10
+  #define MB_RX_GPIO_PORT                 GPIOA
+  #define MB_RX_GPIO_CLK_ENABLE()         __HAL_RCC_GPIOA_CLK_ENABLE()
+  #define MB_RX_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOA_CLK_DISABLE()
+  #define MB_RX_AF                        GPIO_AF7_USART1
+
+#elif (MB_USART_NR == 2)
+
+  #define MB_USART                        USART2
+  #define MB_USART_IRQn                   USART2_IRQn
+  #define MB_USART_IRQHandler             USART2_IRQHandler
+  #define MB_USART_CLK_ENABLE()           __HAL_RCC_USART2_CLK_ENABLE()
+  #define MB_USART_CLK_DISABLE()          __HAL_RCC_USART2_CLK_DISABLE()
+  #define MB_TX_PIN                       GPIO_PIN_2
+  #define MB_TX_GPIO_PORT                 GPIOA
+  #define MB_TX_GPIO_CLK_ENABLE()         __HAL_RCC_GPIOA_CLK_ENABLE()
+  #define MB_TX_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOA_CLK_DISABLE()
+  #define MB_TX_AF                        GPIO_AF7_USART2
+  #define MB_RX_PIN                       GPIO_PIN_3
+  #define MB_RX_GPIO_PORT                 GPIOA
+  #define MB_RX_GPIO_CLK_ENABLE()         __HAL_RCC_GPIOA_CLK_ENABLE()
+  #define MB_RX_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOA_CLK_DISABLE()
+  #define MB_RX_AF                        GPIO_AF7_USART2
+
+#else
+  #error "Unsupported MB_USART configuration. Please define MB_USART_NR as 1 or 2."
+#endif
+
+#endif // _PORT_INTERNAL_H

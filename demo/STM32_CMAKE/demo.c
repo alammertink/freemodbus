@@ -1,6 +1,7 @@
 /*
- * FreeModbus Libary: BARE Demo Application
+ * FreeModbus Libary: STM32 Cmake Demo Application
  * Copyright (C) 2006 Christian Walter <wolti@sil.at>
+ * Copyright (C) 2025 Arend Lammertink <a.lammertink@ara-industries.nl>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,13 +17,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * File: $Id$
  */
 
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
 #include "mbport.h"
 #include "port_internal.h"
+
 
 /* ----------------------- Defines ------------------------------------------*/
 #define REG_INPUT_START 1000
@@ -36,7 +37,11 @@ static USHORT   usRegInputBuf[REG_INPUT_NREGS];
 
 /* ----------------------- Static functions ---------------------------------*/
 
-/* Modbus register callback functions */
+/* --------------------- Forward declarations -------------------------------*/
+
+void Error_Handler(void); // standard defined in main.h
+
+/* ----------------Modbus register callback functions -----------------------*/
 eMBErrorCode eMBRegInputCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNRegs);
 eMBErrorCode eMBRegHoldingCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegisterMode eMode);
 eMBErrorCode eMBRegCoilsCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNCoils, eMBRegisterMode eMode);
@@ -64,6 +69,11 @@ void modbusInit(void)
     
     /* Enable Modbus protocol stack */
     eStatus = eMBEnable();
+
+    if( eStatus != MB_ENOERR )
+    {
+        Error_Handler();
+    }
 }
 
 /**
@@ -115,6 +125,11 @@ eMBErrorCode
 eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs,
                  eMBRegisterMode eMode )
 {
+    UNUSED( pucRegBuffer );
+    UNUSED( usAddress );
+    UNUSED( usNRegs );
+    UNUSED( eMode );
+
     return MB_ENOREG;
 }
 
@@ -123,12 +138,21 @@ eMBErrorCode
 eMBRegCoilsCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNCoils,
                eMBRegisterMode eMode )
 {
+    UNUSED( pucRegBuffer );
+    UNUSED( usAddress );
+    UNUSED( usNCoils );
+    UNUSED( eMode );
+
     return MB_ENOREG;
 }
 
 eMBErrorCode
 eMBRegDiscreteCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNDiscrete )
 {
+    UNUSED( pucRegBuffer );
+    UNUSED( usAddress );
+    UNUSED( usNDiscrete );
+
     return MB_ENOREG;
 }
 

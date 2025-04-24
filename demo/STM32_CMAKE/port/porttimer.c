@@ -27,16 +27,18 @@ BOOL xMBPortTimersInit(USHORT usTim1Timerout50us)
     usTimerPeriod50us = usTim1Timerout50us;
     
     /* The timer is configured in main.c by STM32CubeMX */
+    /*
     if(pxModbusTimer == NULL)
     {
         return FALSE;
     }
-    
+    */
     return TRUE;
 }
 
 void vMBPortTimersEnable(void)
 {
+#if 0    
     /* Reset timer counter */
     __HAL_TIM_SET_COUNTER(pxModbusTimer, 0);
     
@@ -49,6 +51,7 @@ void vMBPortTimersEnable(void)
     
     /* Start timer */
     HAL_TIM_Base_Start(pxModbusTimer);
+#endif    
 }
 
 void vMBPortTimersDisable(void)
