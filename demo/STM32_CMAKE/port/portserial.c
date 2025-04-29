@@ -2,18 +2,8 @@
 #include "mbport.h"
 #include "port_internal.h"
 
-
 UART_HandleTypeDef          uart_mb; 
 
-static volatile uint8_t     rxByte = 0;
-static volatile uint8_t     txByte = 0;
-
-
-/* Forward declarations for HAL callbacks */
-static void Modbus_UART_RxCpltCallback( UART_HandleTypeDef *huart );
-static void Modbus_UART_TxCpltCallback( UART_HandleTypeDef *huart );
-
-/* ----------------------- Start implementation -----------------------------*/
 
 /*  Note that UART configuration for ST processors is, well, different:
 
@@ -85,20 +75,6 @@ BOOL xMBPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBPar
         return FALSE; // UART initialization failed
     }
 
-#if (USE_HAL_UART_REGISTER_CALLBACKS == 1)
-    if( HAL_UART_RegisterCallback( &uart_mb, HAL_UART_RX_COMPLETE_CB_ID, Modbus_UART_RxCpltCallback ) != HAL_OK )
-    {
-        return FALSE; // Callback registration failed
-    }
-
-    if( HAL_UART_RegisterCallback( &uart_mb, HAL_UART_TX_COMPLETE_CB_ID, Modbus_UART_TxCpltCallback ) != HAL_OK )
-    {
-        return FALSE; // Callback registration failed
-    }
-#else
-#error "HAL UART callback registration must be enabled"
-#endif
-
     // Disable RX and TX interrupts initially
     __HAL_UART_DISABLE_IT(&uart_mb, UART_IT_RXNE);
     __HAL_UART_DISABLE_IT(&uart_mb, UART_IT_TXE);
@@ -106,80 +82,9 @@ BOOL xMBPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBPar
     return TRUE;
 }
 
-
-void vMBPortSerialEnable(BOOL xRxEnable, BOOL xTxEnable)
-{
-    if (xRxEnable)
-    {
-        __HAL_UART_ENABLE_IT(&uart_mb, UART_IT_RXNE);
-        HAL_UART_Receive_IT(&uart_mb, (uint8_t *)&rxByte, 1);
-    }
-    else
-    {
-        __HAL_UART_DISABLE_IT(&uart_mb, UART_IT_RXNE);
-    }
-
-    if (xTxEnable)
-    {
-        __HAL_UART_ENABLE_IT(&uart_mb, UART_IT_TXE);
-        pxMBFrameCBTransmitterEmpty();  // kickstart transmission
-    }
-    else
-    {
-        __HAL_UART_DISABLE_IT(&uart_mb, UART_IT_TXE);
-    }
-}
-
-
-BOOL xMBPortSerialPutByte( CHAR ucByte )
-{
-    txByte = (uint8_t)ucByte;
-
-    if( HAL_UART_Transmit_IT( &uart_mb, (uint8_t *)&txByte, 1 ) == HAL_OK )
-    {
-        return TRUE;
-    }
-    return FALSE;
-}
-
-BOOL xMBPortSerialGetByte( CHAR* pucByte )
-{
-    *pucByte = (CHAR)rxByte;
-    return TRUE;
-}
-
-/* ----------------------- HAL UART Callbacks -------------------------------*/
-
-static void Modbus_UART_RxCpltCallback( UART_HandleTypeDef *huart )
-{
-    UNUSED(huart);
-
-    HAL_UART_Receive_IT( &uart_mb, (uint8_t *)&rxByte, 1 );
-
-    pxMBFrameCBByteReceived();
-}
-
-static void Modbus_UART_TxCpltCallback( UART_HandleTypeDef *huart )
-{
-    UNUSED(huart);
-
-    pxMBFrameCBTransmitterEmpty();
-}
-
-/**
- * @brief UART MSP Initialization
- *        This function configures the hardware resources used for Modbus UART:
- *           - Peripheral's clock enable
- *           - Peripheral's GPIO Configuration
- *           - NVIC configuration for UART interrupt
- * @param huart: UART handle pointer
- * @retval None
- */
-void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+void MB_Uart_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-    if( huart->Instance != MB_USART )        {  return; }
 
     // Enable UART peripheral clock
     MB_USART_CLK_ENABLE();
@@ -204,39 +109,67 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
     HAL_GPIO_Init(MB_RX_GPIO_PORT, &GPIO_InitStruct);
 
     // Configure NVIC for UART interrupt
-    HAL_NVIC_SetPriority(MB_USART_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(MB_USART_IRQn);
+    HAL_NVIC_SetPriority(MB_USART_IRQn, MB_USART_IRQ_priority, MB_USART_IRQ_subpriority);
+    HAL_NVIC_DisableIRQ(MB_USART_IRQn);
 }
 
-/**
- * @brief UART MSP De-Initialization
- *        This function frees the hardware resources used for Modbus UART:
- *           - Disable the Peripheral's clock
- *           - Revert GPIO configuration to default state
- *           - Disable NVIC for UART interrupt
- * @param huart: UART handle pointer
- * @retval None
- */
-void HAL_UART_MspDeInit(UART_HandleTypeDef *huart)
+void vMBPortSerialEnable(BOOL rxEnable, BOOL txEnable)
 {
-    if( huart->Instance != MB_USART )        {  return; }
-
-    // Disable UART peripheral clock
-    MB_USART_CLK_DISABLE();
-
-    // Deinitialize UART TX pin
-    HAL_GPIO_DeInit(MB_TX_GPIO_PORT, MB_TX_PIN);
-
-    // Deinitialize UART RX pin
-    HAL_GPIO_DeInit(MB_RX_GPIO_PORT, MB_RX_PIN);
-
-    // Disable NVIC for UART interrupt
+    // Disable interrupts during configuration
     HAL_NVIC_DisableIRQ(MB_USART_IRQn);
+    
+    // Configure receive interrupt
+    if( rxEnable )
+        MB_USART->CR1 |= USART_CR1_RXNEIE;
+    else
+        MB_USART->CR1 &= ~USART_CR1_RXNEIE;
+
+    // Configure transmit interrupt
+    if( txEnable )
+        MB_USART->CR1 |= USART_CR1_TXEIE;
+    else
+        MB_USART->CR1 &= ~USART_CR1_TXEIE;
+
+    // Re-enable UART interrupt only if at least one direction is active
+    if( rxEnable || txEnable )
+        HAL_NVIC_EnableIRQ(MB_USART_IRQn);
+}
+
+BOOL xMBPortSerialPutByte(CHAR byte)
+{
+    MB_USART->TDR = byte;
+    return TRUE;
+}
+
+BOOL xMBPortSerialGetByte(CHAR *byte)
+{
+    *byte = MB_USART->RDR;
+    return TRUE;
 }
 
 void MB_USART_IRQHandler(void)
 {
-    HAL_UART_IRQHandler(&uart_mb);
+    uint32_t isr = MB_USART->ISR;
+    uint32_t cr1 = MB_USART->CR1;
+
+    // Check for receive interrupt
+    if( (isr & USART_ISR_RXNE) && (cr1 & USART_CR1_RXNEIE) )
+    {
+        vMBTimerDebugSetLow();
+        pxMBFrameCBByteReceived();
+    }
+
+    // Check for transmit interrupt
+    if( (isr & USART_ISR_TXE) && (cr1 & USART_CR1_TXEIE) )
+    {
+        pxMBFrameCBTransmitterEmpty();
+    }
+    
+    // Clear error flags - use USART_ICR_NECF instead of USART_ICR_NCF
+    MB_USART->ICR = (USART_ICR_PECF | USART_ICR_FECF | USART_ICR_NECF | 
+                    USART_ICR_ORECF | USART_ICR_IDLECF);
+                    
+    // Do NOT call HAL_UART_IRQHandler here as it will interfere with our direct register access
 }
 
 /* ----------------------- End of file --------------------------------------*/

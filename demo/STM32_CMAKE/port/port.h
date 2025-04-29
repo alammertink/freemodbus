@@ -16,6 +16,7 @@
 #define ENTER_CRITICAL_SECTION()    __disable_irq()
 #define EXIT_CRITICAL_SECTION()     __enable_irq()
 
+
 typedef uint8_t         BOOL;
 typedef unsigned char   UCHAR;
 typedef char            CHAR;
@@ -31,5 +32,8 @@ typedef int32_t         LONG;
 #ifndef FALSE
 #define FALSE           0
 #endif
+
+void                    modbusInit(void);
+void                    modbusPoll(void);
 
 #endif

@@ -66,9 +66,6 @@ This port has been tested with the NUCLEO-G431RB board and should work on a wide
    - Select "Basic" for Application Structure
    - Select "CMake" for Toolchain/IDE
      ![Project Settings](./ProjectManager.png)
-   - Select "Advanced Settigs" and enable the Register CallBacks for UART and USART
-     ![Register Callbacks](./EnableUartRegisterCallBacks.png)
-
 
 5. **Generate Code**
    - Click "Generate Code" button to create the project files
@@ -192,15 +189,6 @@ The `demo.c` file provides a simple example of how to initialize and use the Fre
 
 The demo is meant to be used as a starting point and reference for your own implementation.
 
-## Port Implementation Notes
-
-This port is inspired by both the ADUC7XXX port and the STM32F1 port, with additional improvements:
-
-1. **HAL Compatibility**: Uses STM32 HAL/LL drivers for improved compatibility across STM32 families.
-2. **Timer Implementation**: Uses TIM7 general-purpose timer for Modbus timing.
-3. **Critical Section**: Implements critical sections using `__disable_irq()` and `__enable_irq()`.
-4. **UART Configuration**: Leverages the board support package (BSP) for UART configuration.
-
 ## Example Usage
 
 ```c
@@ -249,45 +237,82 @@ int main(void)
 - The current implementation only supports RTU mode (ASCII mode is not tested).
 - The port uses TIM7 which may conflict with other timer-using peripherals.
 
-## Known Issues
-
-### Nucleo BSP Serial Port Callback Bug
-
-There is a known bug in the Nucleo BSP (`stm32g4xx_nucleo.c`) that causes the serial port's default callbacks to not be registered correctly. This issue affects the initialization of the UART when using the BSP.
-
-#### Problem
-The `IsComMspCbValid` variable is incorrectly checked as a single value instead of an array indexed by the COM port.
-
-#### Fix
-To resolve this issue, modify the `stm32g4xx_nucleo.c` file as follows:
-
-```diff
---- a/Drivers/BSP/STM32G4xx_Nucleo/stm32g4xx_nucleo.c
-+++ b/Drivers/BSP/STM32G4xx_Nucleo/stm32g4xx_nucleo.c
-@@ -384,7 +384,7 @@ int32_t BSP_COM_Init(COM_TypeDef COM, COM_InitTypeDef *COM_Init)
-     /* Init the UART Msp */
-     COM1_MspInit(&hcom_uart[COM]);
- #else
--    if(IsComMspCbValid == 0U)
-+    if(IsComMspCbValid[COM] == 0U)
-     {
-       if(BSP_COM_RegisterDefaultMspCallbacks(COM) != BSP_ERROR_NONE)
-       {
-```
-
-#### Steps for Users
-1. Locate the `stm32g4xx_nucleo.c` file in your project under `Drivers/BSP/STM32G4xx_Nucleo/`.
-2. Apply the above patch manually or make the necessary changes directly in the file.
-3. Rebuild your project to ensure the fix is applied.
-
-This issue will need to be checked and resolved manually until an official fix is provided in the BSP package.
-
----
 
 ### Additional Notes
 
 - Ensure that the UART callbacks are properly registered after applying the fix.
 - If you encounter issues with UART communication, verify that the `IsComMspCbValid` array is correctly indexed for your COM port.
+
+## Testing the Demo
+
+The Modbus RTU implementation can be tested with various Modbus master tools. One recommended option is modpoll, a command-line based Modbus master simulator.
+
+### Testing with modpoll
+
+[modpoll](https://www.modbusdriver.com/modpoll.html) is a free command-line based Modbus master simulator that can be used to test your Modbus slave implementation.
+
+#### Example Test Command
+
+The following example shows how to read input registers from the demo application using the ST-Link virtual COM port (in this case COM7):
+
+```
+$ ./modpoll.exe -m rtu -a 10 -r 1000 -c 4 -d 8 -t 3 -b 115200 -p none -s 1 COM7
+modpoll 3.10 - FieldTalk(tm) Modbus(R) Master Simulator
+Copyright (c) 2002-2021 proconX Pty Ltd
+Visit https://www.modbusdriver.com for Modbus libraries and tools.
+
+Protocol configuration: Modbus RTU, FC4
+Slave configuration...: address = 10, start reference = 1000, count = 4
+Communication.........: COM7, 115200, 8, 1, none, t/o 1.00 s, poll rate 1000 ms
+Data type.............: 16-bit register, input register table
+
+-- Polling slave... (Ctrl-C to stop)
+[1000]: -26794
+[1001]: 0
+[1002]: 0
+[1003]: 0
+-- Polling slave... (Ctrl-C to stop)
+[1000]: 1317
+[1001]: 0
+[1002]: 0
+[1003]: 0
+-- Polling slave... (Ctrl-C to stop)
+[1000]: 27325
+[1001]: 0
+[1002]: 0
+[1003]: 0
+-- Polling slave... (Ctrl-C to stop)
+[1000]: 30445
+[1001]: 0
+[1002]: 0
+[1003]: 0
+-- Polling slave... (Ctrl-C to stop)
+```
+
+#### modpoll Command Line Options
+
+The command line parameters used in the example above are:
+
+| Option | Description |
+|--------|-------------|
+| `-m rtu` | Use Modbus RTU protocol |
+| `-a 10` | Set the slave address to 10 |
+| `-r 1000` | Start reading at reference 1000 |
+| `-c 4` | Read 4 registers |
+| `-d 8` | Set data bits to 8 |
+| `-t 3` | Set Modbus function code to 3 (read holding registers) |
+| `-b 115200` | Set baud rate to 115200 |
+| `-p none` | Set parity to none |
+| `-s 1` | Set stop bits to 1 |
+| `COM7` | COM port to use |
+
+### Other Testing Tools
+
+Other Modbus master software that can be used for testing:
+
+- [Modbus Poll](https://www.modbustools.com/modbus_poll.html) - GUI-based commercial Modbus master simulator
+- [QModMaster](https://github.com/QModbus/QModMaster) - Open-source Qt-based Modbus master
+- [PyModbus](https://github.com/riptideio/pymodbus) - Python-based Modbus implementation
 
 ## License
 

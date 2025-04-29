@@ -16,6 +16,23 @@
   #error "No STM32 device family defined!"
 #endif
 
+/* define default USART IRQ priority and subpriority if not defined */
+#ifndef MB_USART_IRQ_priority
+  #define MB_USART_IRQ_priority     3
+#endif
+#ifndef MB_USART_IRQ_subpriority
+  #define MB_USART_IRQ_subpriority  1
+#endif
+
+/* define default TIM7 IRQ priority and subpriority if not defined */
+#ifndef MB_TIM7_IRQ_priority
+  #define MB_TIM7_IRQ_priority     4
+#endif
+#ifndef MB_TIM7_IRQ_subpriority
+  #define MB_TIM7_IRQ_subpriority  1
+#endif
+
+
 /* Default to USART2 if MB_USART_NR is not defined */
 #ifndef MB_USART_NR
   #define MB_USART_NR   2
@@ -61,5 +78,28 @@
 #else
   #error "Unsupported MB_USART configuration. Please define MB_USART_NR as 1 or 2."
 #endif
+
+//#define MB_TIMER_DEBUG              1
+#define MB_TIMER_DEBUG_PORT         GPIOA
+#define MB_TIMER_DEBUG_PIN          GPIO_PIN_5  // PA5 is connected to the onboard LED on most Nucleo boards
+
+/* Debug helper functions */
+#if MB_TIMER_DEBUG == 1
+static inline void vMBTimerDebugSetHigh( void )
+{
+    HAL_GPIO_WritePin( MB_TIMER_DEBUG_PORT, MB_TIMER_DEBUG_PIN, GPIO_PIN_SET );
+}
+
+static inline void vMBTimerDebugSetLow( void )
+{
+    HAL_GPIO_WritePin( MB_TIMER_DEBUG_PORT, MB_TIMER_DEBUG_PIN, GPIO_PIN_RESET );
+}
+#else
+#define vMBTimerDebugSetHigh()
+#define vMBTimerDebugSetLow()
+#endif
+
+
+void                    MB_Uart_Init(void);
 
 #endif // _PORT_INTERNAL_H

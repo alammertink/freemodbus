@@ -24,12 +24,14 @@
 #include "mbport.h"
 #include "port_internal.h"
 
+#include <stdio.h>
 
 /* ----------------------- Defines ------------------------------------------*/
 #define REG_INPUT_START 1000
 #define REG_INPUT_NREGS 4
 #define SLAVE_ID        0x0A
 #define MB_BAUDRATE     115200
+//#define MB_BAUDRATE     9600
 
 /* ----------------------- Static variables ---------------------------------*/
 static USHORT   usRegInputStart = REG_INPUT_START;
@@ -47,6 +49,9 @@ eMBErrorCode eMBRegHoldingCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNRe
 eMBErrorCode eMBRegCoilsCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNCoils, eMBRegisterMode eMode);
 eMBErrorCode eMBRegDiscreteCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNDiscrete);
 
+
+static uint32_t lastToggleTime; 
+
 /* ----------------------- Public API functions -----------------------------*/
 /**
   * @brief  Initialize Modbus functionality
@@ -55,8 +60,16 @@ eMBErrorCode eMBRegDiscreteCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usND
   */
 void modbusInit(void)
 {
+    printf("STM32 Modbus RTU Slave Example\r\n");
+
+    // Deinitialize COM port (initialized by BSP) for use with Modbus
+    HAL_Delay(100); // Wait for message to be sent
+    BSP_COM_DeInit(COM1); 
+
     eMBErrorCode eStatus;
     
+    MB_Uart_Init();
+
     /* Initialize Modbus protocol stack */
     eStatus = eMBInit(MB_RTU, SLAVE_ID, 0, MB_BAUDRATE, MB_PAR_NONE);
     //eStatus = eMBInit(MB_ASCII, SLAVE_ID, 0, MB_BAUDRATE, MB_PAR_EVEN);
@@ -74,6 +87,8 @@ void modbusInit(void)
     {
         Error_Handler();
     }
+
+    lastToggleTime = HAL_GetTick(); 
 }
 
 /**
@@ -88,6 +103,15 @@ void modbusPoll(void)
     
     /* Update the first register as a counter */
     usRegInputBuf[0]++;
+
+    /* Toggle LED for visual feedback every 500 ms */
+    if (HAL_GetTick() - lastToggleTime >= 500)
+    {
+#ifndef MB_TIMER_DEBUG
+        BSP_LED_Toggle(LED_GREEN);
+#endif    
+        lastToggleTime = HAL_GetTick();
+    }
 }
 
 
