@@ -112,15 +112,13 @@ cp freemodbus/demo/STM32_CMAKE/CMakeLists.txt .
 If you're using your own CMakeLists.txt, make sure to add the following:
 
 ```cmake
-# After the project() line and add_executable() line
-
 # Add FreeModbus library
 add_subdirectory(${CMAKE_SOURCE_DIR}/freemodbus ${CMAKE_BINARY_DIR}/freemodbus)
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # ...existing sources...
-    ${FREEMODBUS_APP_SOURCES}
+    ${FREEMODBUS_APP_SOURCES} # Platform-dependent sources from FreeModbus
     ${CMAKE_SOURCE_DIR}/freemodbus/demo/STM32_CMAKE/demo.c
 )
 
