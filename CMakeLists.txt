@@ -6,15 +6,19 @@ cmake_minimum_required(VERSION 3.16)
 # Define the FreeModbus library target
 add_library(freemodbus STATIC)
 
-# Include directories - only include core FreeModbus headers
-target_include_directories(freemodbus PUBLIC
+# Define include directories for FreeModbus
+set(FREEMODBUS_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/include
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/rtu
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/ascii
     ${CMAKE_CURRENT_SOURCE_DIR}/modbus/tcp
     ${CMAKE_CURRENT_SOURCE_DIR}/demo/STM32_CMAKE/port
-    # and CMSIS headers
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/CMSIS/Include
+)
+
+# Use FREEMODBUS_INCLUDE_DIRS in target_include_directories
+target_include_directories(freemodbus PUBLIC
+    ${FREEMODBUS_INCLUDE_DIRS}
 )
 
 # Core FreeModbus library source files
@@ -40,16 +44,19 @@ target_sources(freemodbus PRIVATE
     ${FREEMODBUS_CORE_SOURCES}
 )
 
+# Define platform-dependent sources for the application
+set(FREEMODBUS_APP_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/demo/STM32_CMAKE/port/portserial.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/demo/STM32_CMAKE/port/porttimer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/demo/STM32_CMAKE/port/portevent.c
+    PARENT_SCOPE
+)
+
 # Enable position-independent code (if needed)
 set_property(TARGET freemodbus PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Set compiler options
 target_compile_options(freemodbus PRIVATE
-    -DSTM32_CMAKE    
+    -DSTM32_CMAKE
 )
 
-# Export include directories for parent project
-set(FREEMODBUS_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/modbus/include
-    PARENT_SCOPE
-)
