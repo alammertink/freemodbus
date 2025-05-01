@@ -24,6 +24,11 @@
 #include "mbport.h"
 #include "port_internal.h"
 
+// Include BSP package
+#if defined(STM32G4xx) || defined(STM32G431xx)
+  #include "stm32g4xx_nucleo.h"
+#endif
+
 #include <stdio.h>
 
 /* ----------------------- Defines ------------------------------------------*/
