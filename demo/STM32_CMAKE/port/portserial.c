@@ -84,29 +84,12 @@ BOOL xMBPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBPar
 
 void MB_Uart_Init(void)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-
     // Enable UART peripheral clock
     MB_USART_CLK_ENABLE();
 
     // Enable GPIO clocks
     MB_TX_GPIO_CLK_ENABLE();
     MB_RX_GPIO_CLK_ENABLE();
-
-    // Configure UART TX pin
-    GPIO_InitStruct.Pin       = MB_TX_PIN;
-    GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull      = GPIO_PULLUP;
-    GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_HIGH;
-    GPIO_InitStruct.Alternate = MB_TX_AF;
-
-    HAL_GPIO_Init(MB_TX_GPIO_PORT, &GPIO_InitStruct);
-
-    // Configure UART RX pin
-    GPIO_InitStruct.Pin       = MB_RX_PIN;
-    GPIO_InitStruct.Alternate = MB_RX_AF;
-    
-    HAL_GPIO_Init(MB_RX_GPIO_PORT, &GPIO_InitStruct);
 
     // Configure NVIC for UART interrupt
     HAL_NVIC_SetPriority(MB_USART_IRQn, MB_USART_IRQ_priority, MB_USART_IRQ_subpriority);
