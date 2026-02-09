@@ -126,7 +126,8 @@ static xMBFunctionHandler xFuncHandlers[MB_FUNC_HANDLERS_MAX] = {
 
 /* ----------------------- Start implementation -----------------------------*/
 eMBErrorCode
-eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity )
+eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity,
+         UCHAR ucStopBits )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
 
@@ -181,7 +182,7 @@ eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eM
             pxMBFrameCBTransmitterEmpty = xMBRTUTransmitFSM;
             pxMBPortCBTimerExpired = xMBRTUTimerT35Expired;
 #endif
-            eStatus = eMBRTUInit( ucMBAddress, ucPort, ulBaudRate, eParity );
+            eStatus = eMBRTUInit( ucMBAddress, ucPort, ulBaudRate, eParity, ucStopBits );
             break;
 #endif
 #if MB_ASCII_ENABLED > 0
@@ -223,7 +224,7 @@ eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eM
             pxMBFrameCBTransmitterEmpty = xMBASCIITransmitFSM;
             pxMBPortCBTimerExpired = xMBASCIITimerT1SExpired;
 #endif
-            eStatus = eMBASCIIInit( ucMBAddress, ucPort, ulBaudRate, eParity );
+            eStatus = eMBASCIIInit( ucMBAddress, ucPort, ulBaudRate, eParity, ucStopBits );
             break;
 #endif
         default:
@@ -451,10 +452,17 @@ eMBPoll( void )
                     ucMBFrame[usLength++] = ( UCHAR )( ucFunctionCode | MB_FUNC_ERROR );
                     ucMBFrame[usLength++] = eException;
                 }
+#if MB_ASCII_ENABLED > 0
                 if( ( eMBCurrentMode == MB_ASCII ) && MB_ASCII_TIMEOUT_WAIT_BEFORE_SEND_MS )
                 {
                     vMBPortTimersDelay( MB_ASCII_TIMEOUT_WAIT_BEFORE_SEND_MS );
                 }                
+#elif MB_RTU_ENABLED > 0
+                if ( ( eMBCurrentMode == MB_RTU ) && MB_RTU_TIMEOUT_WAIT_BEFORE_SEND_MS )
+                {
+                    vMBPortTimersDelay( MB_RTU_TIMEOUT_WAIT_BEFORE_SEND_MS );
+                }
+#endif
                 eStatus = peMBFrameSendCur( ucMBAddress, ucMBFrame, usLength );
             }
             break;
@@ -463,5 +471,5 @@ eMBPoll( void )
             break;
         }
     }
-    return MB_ENOERR;
+    return eStatus;
 }
