@@ -25,15 +25,14 @@ UART_HandleTypeDef          uart_mb;
     UartHandle.Init.Parity     = UART_PARITY_EVEN;
 */
 
-
-BOOL xMBPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity eParity )
+BOOL xMBPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity eParity, UCHAR ucStopBits )
 {
     UNUSED( ucPORT );
 
     // Configure UART for Modbus communication
     uart_mb.Instance          = MB_USART;
     uart_mb.Init.BaudRate     = ulBaudRate;
-    uart_mb.Init.StopBits     = UART_STOPBITS_1; // Always use 1 stop bit
+    uart_mb.Init.StopBits     = (ucStopBits == 1) ? UART_STOPBITS_1 : UART_STOPBITS_2;
     uart_mb.Init.Mode         = UART_MODE_TX_RX;
     uart_mb.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
     uart_mb.Init.OverSampling = UART_OVERSAMPLING_16;
