@@ -383,8 +383,8 @@ xMBRTUTransmitFSM( void )
             /* Disable transmitter. This prevents another transmit buffer
              * empty interrupt. */
             vMBPortSerialEnable( TRUE, FALSE );
-            eSndState = STATE_TX_IDLE;
 #endif
+            eSndState = STATE_TX_IDLE;
         }
         break;
     }
