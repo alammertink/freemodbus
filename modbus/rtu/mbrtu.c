@@ -154,7 +154,7 @@ eMBRTUReceive( UCHAR * pucRcvAddress, UCHAR ** pucFrame, USHORT * pusLength )
     USHORT          usCRC16Result = 0;
 
     ENTER_CRITICAL_SECTION(  );
-    assert( usRcvBufferPos < MB_SER_PDU_SIZE_MAX );
+    assert( usRcvBufferPos <= MB_SER_PDU_SIZE_MAX );
 
     /* Length and CRC check */
 #ifdef STM32_CMAKE // work around nasty gcc compiler bug
@@ -376,9 +376,14 @@ xMBRTUTransmitFSM( void )
         else
         {
             xNeedPoll = xMBPortEventPost( EV_FRAME_SENT );
+#ifdef MB_TX_COMPLETE_EMPTY
+            /* Optionally disable this as the final character MAY STILL SENDING when this is raised
+             * Instead use the STATE_TX_IDLE when next called on TX_COMPLETE when needed */
+#else
             /* Disable transmitter. This prevents another transmit buffer
              * empty interrupt. */
             vMBPortSerialEnable( TRUE, FALSE );
+#endif
             eSndState = STATE_TX_IDLE;
         }
         break;

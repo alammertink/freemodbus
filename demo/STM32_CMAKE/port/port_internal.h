@@ -31,9 +31,9 @@
   #define MB_TIM7_IRQ_subpriority  1
 #endif
 
-/* Default to USART3 if MB_USART_NR is not defined */
+/* Default to USART2 if MB_USART_NR is not defined */
 #ifndef MB_USART_NR
-  #define MB_USART_NR   3
+  #define MB_USART_NR   2
 #endif
 
 /* Define macros based on the selected USART */
