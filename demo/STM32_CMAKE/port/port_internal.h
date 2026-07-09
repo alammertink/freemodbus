@@ -65,8 +65,22 @@
   #define MB_RX_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOA_CLK_DISABLE()
   #define MB_RX_AF                        GPIO_AF7_USART2
 
+#elif (MB_USART_NR == 3)
+
+  #define MB_USART                        USART3
+  #define MB_USART_IRQn                   USART3_IRQn
+  #define MB_USART_IRQHandler             USART3_IRQHandler
+  #define MB_USART_CLK_ENABLE()           __HAL_RCC_USART3_CLK_ENABLE()
+  #define MB_USART_CLK_DISABLE()          __HAL_RCC_USART3_CLK_DISABLE()
+  #define MB_TX_GPIO_CLK_ENABLE()         __HAL_RCC_GPIOB_CLK_ENABLE()
+  #define MB_TX_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOB_CLK_DISABLE()
+  #define MB_TX_AF                        GPIO_AF7_USART3
+  #define MB_RX_GPIO_CLK_ENABLE()         __HAL_RCC_GPIOB_CLK_ENABLE()
+  #define MB_RX_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOB_CLK_DISABLE()
+  #define MB_RX_AF                        GPIO_AF7_USART3
+
 #else
-  #error "Unsupported MB_USART configuration. Please define MB_USART_NR as 1 or 2."
+  #error "Unsupported MB_USART configuration. Please define MB_USART_NR as 1, 2, or 3."
 #endif
 
 //#define MB_TIMER_DEBUG              1
