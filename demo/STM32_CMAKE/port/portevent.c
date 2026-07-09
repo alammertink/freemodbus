@@ -3,8 +3,8 @@
 #include "port_internal.h"
 
 /* Static variables */
-static eMBEventType eQueuedEvent;
-static BOOL xEventInQueue;
+static volatile eMBEventType eQueuedEvent;
+static volatile BOOL xEventInQueue;
 
 BOOL xMBPortEventInit(void)
 {
